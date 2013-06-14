@@ -26,7 +26,7 @@ retard = N_T*Ts;    %retard en nombre d'echantillons
 i=1;
 h = raylrnd(1/sqrt(2));
 echelle = 0:1:10;
-echelle = echelle;
+%echelle = echelle;
 
 TEBLDPC = zeros(1,length(echelle));
 TEBLDPCA = zeros(1,length(echelle));

@@ -14,11 +14,11 @@ N_T = 5;    %Nombre de periode autour du max du cos sureleve
 rolloff = [0.2,0.25,0.35];
 retard = N_T*Ts;    %retard en nombre d'echantillons
 i = 1;
-%echelle = 0:0.25:3;
-echelle = 40;
-EsNo=echelle;
+echelle = 0:0.25:3;
+%echelle = 40;
+%EsNo=echelle;
 TEB_LDPC = zeros(1,length(echelle));
-ibo = 0;
+ibo = -2;
 alpha_a = 1.96;
 beta_a = 0.99;
 alpha_phi = 2.53;
@@ -36,7 +36,8 @@ enc = fec.ldpcenc(H);
 %Modulation 16-APSK
 %gamma = gamma_dvbs2(r);
 %[constellation,bitMapping] = DVBS2Constellation('16APSK',gamma);
-mapping1 = modem.qammod('M',16,'PhaseOffset',0,'SymbolOrder','Gray','InputType','Bit');
+%mapping1 = modem.qammod('M',16,'PhaseOffset',0,'SymbolOrder','Gray','InputType','Bit');
+mapping1 = modem.pskmod('M',4,'PhaseOffset',pi/4,'SymbolOrder','Gray','InputType','Bit');
 
 %Cosinus sureleve (filtre de mise en forme)
 h = rcosfir(rolloff(1),N_T,Ts,Ts,'sqrt');
@@ -52,7 +53,7 @@ dec.OutputFormat = 'Information part';
 dec.NumIterations = 50;
 dec.DoParityChecks = 'Yes';
 
-%for EsNo = echelle
+for EsNo = echelle
     nb_erreurLDPC = 0;
     nb_it = 0;
     
@@ -103,13 +104,14 @@ dec.DoParityChecks = 'Yes';
         signal_recept = filter(hr,1,signal_bruite);
         
         %Echantillonneur optimal
-        signal_ech1 = signal_recept(2*retard+1:Ts:end);
+        signal_ech = signal_recept(2*retard+1:Ts:end);
         
-        phase_est = nonlin_phase(ibo,alpha_phi,beta_phi);
-        signal_ech = signal_ech1*exp(-j*phase_est);
+        %phase_est = nonlin_phase(ibo,alpha_phi,beta_phi);
+        %signal_ech = signal_ech1*exp(-j*phase_est);
         
         %llr = demod_16apskllr(signal_ech,gamma);
-        demodObj = modem.qamdemod(mapping1,'DecisionType','LLR','NoiseVariance',2*sigma2);
+        %demodObj = modem.qamdemod(mapping1,'DecisionType','Hard Decision','NoiseVariance',2*sigma2);
+        demodObj = modem.pskdemod(mapping1,'DecisionType','Hard Decision','NoiseVariance',2*sigma2);
         llr = demodulate(demodObj,signal_ech.');
         
         %decision
@@ -117,11 +119,14 @@ dec.DoParityChecks = 'Yes';
         
         % Desentrelacement
         desentrelacement = matdeintrlv(receivellr,length(receivellr)/4,4);
+        decodeLDPC = desentrelacement;
+        nb_erreurLDPC = sum(decodeLDPC~=codeword) + nb_erreurLDPC;
+        nb_it = nb_it + 1;
         
         % Decodage LDPC
-        decodeLDPC = decode(dec,desentrelacement);
-        nb_erreurLDPC = sum(decodeLDPC~=sk) + nb_erreurLDPC;
-        nb_it = nb_it + 1;
+        %decodeLDPC = decode(dec,desentrelacement);
+        %nb_erreurLDPC = sum(decodeLDPC~=sk) + nb_erreurLDPC;
+        %nb_it = nb_it + 1;
         
     end
     
@@ -129,9 +134,9 @@ dec.DoParityChecks = 'Yes';
     i = i+1;
     
     
-%end
+end
 
-scatterplot(signal_ech1)
-scatterplot(signal_ech)
+%scatterplot(signal_ech1)
+%scatterplot(signal_ech)
 %semilogy(echelle,TEB_LDPC)
-%save('ibo_16APSK_3','TEB_LDPC')
+save('ibo_16APSK_2','TEB_LDPC')
